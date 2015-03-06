@@ -4,14 +4,17 @@ from Components.PyQt.PictureManager.pictureManager import PictureState
 
 class OrchestratorSlots(QObject):
     # Define all sendable signals
-    # Send to inform view that picture model has been moved  
+    # Sent to inform view that picture model has been moved  
     picturesUpdated = pyqtSignal(QVariant)
-    # Send when an update about the status of the camera is available
+    # Sent when an update about the status of the camera is available
     onCameraConnection = pyqtSignal(bool, str) 
-    # Send when the workspace become available or unavailable
+    # Sent when the workspace become available or unavailable
     workspaceAvailable = pyqtSignal(bool)
-    # Send when a new reconstruction is available
+    # Sent when a new reconstruction is available
     reconstructionChanged = pyqtSignal(str)
+    # Sent when a reconstruction command is issued. The arguments are
+    # imDir,method,omvgBuildDir,outDir,pointCloudDir
+    onReconstructionCommand = pyqtSignal(str, str, str, str, str)
 
     # Define All Usable Slots
     @pyqtSlot(QVariant, int)
@@ -196,17 +199,27 @@ class OrchestratorSlots(QObject):
 
     @pyqtSlot()
     def launchReconstruction(self):
+        """ This slot is called when some command from the GUI should start a reconstruction.
+        """
         validFiles = self.pictureModel.validFiles()
         crapDir = self.workspaceManager.get_scene_temp_output_dir()
         inDir = self.workspaceManager.get_selected_picture_dir()
         outDir = self.workspaceManager.get_scene_output_dir()
         method = "FlawlessVictory"
-        self.reconstructionManager.launchReconstruction(inDir,\
-            method,\
-            self.OPENMVG_BUILD_DIR,\
-            crapDir,\
-            outDir)
-        self.reconstructionChanged.emit(os.path.join(\
-            self.workspaceManager.get_current_scene().full_path(),\
-            self.workspaceManager.get_current_scene().get_reconstruction_temp_dir(),\
-            "FinalColorized.ply"))
+        self.onReconstructionCommand.emit(inDir,\
+                                          method,\
+                                          self.OPENMVG_BUILD_DIR,\
+                                          crapDir,\
+                                          outDir)
+
+    @pyqtSlot(str)
+    def newPointCloud(self, filepath):
+        """ This slot is called when a new .ply file is available.
+        """
+        # resultPath = os.path.join(\
+        #     self.workspaceManager.get_current_scene().full_path(),\
+        #     self.workspaceManager.get_current_scene().get_reconstruction_temp_dir(),\
+        #     "FinalColorized.ply")
+        
+        # Forward the signal emitted...
+        self.reconstructionChanged.emit(filepath)

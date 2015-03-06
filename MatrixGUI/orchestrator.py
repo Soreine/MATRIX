@@ -28,6 +28,10 @@ class Orchestrator(OrchestratorSlots):
         self.pictureFetcher = Pygphoto(watch_camera=True)
         self.workspaceManager = WorkspaceManager(self.pictureModel)
         self.reconstructionManager = ReconstructionManager()
+        # Move the reconstruction manager to a thread
+        self.reconstructionThread = QThread()
+        self.reconstructionManager.moveToThread(self.reconstructionThread)
+        self.reconstructionThread.start()
 
         # Instantiate the view
         engine = QQmlApplicationEngine()
@@ -74,7 +78,9 @@ class Orchestrator(OrchestratorSlots):
         self.root.sig_importThumbnails.connect(self.importThumbnails)
         
         ######## Reconstruction Signals
-        self.root.sig_launchReconstruction.connect(self.launchReconstruction)  
+        self.root.sig_launchReconstruction.connect(self.launchReconstruction)
+        self.onReconstructionCommand.connect(self.reconstructionManager.launchReconstruction)
+        self.reconstructionManager.newPointCloud.connect(self.newPointCloud)
         self.reconstructionChanged.connect(self.root.slot_reconstructionChanged)
 
         ######## workspace manager signals
